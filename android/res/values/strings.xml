@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">Teturisu</string>
+    <string name="title_activity_main_menu">MainMenu</string>
+    <string name="appbar_scrolling_view_behavior">MainMenu</string>
+
+</resources>

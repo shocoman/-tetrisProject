@@ -1,0 +1,522 @@
+package com.teturisu.game
+
+import com.badlogic.gdx.ApplicationAdapter
+import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.Input
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.GL20
+import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.graphics.g2d.Batch
+import com.badlogic.gdx.graphics.g2d.BitmapFont
+import com.badlogic.gdx.graphics.g2d.Sprite
+import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator
+import com.badlogic.gdx.input.GestureDetector
+import com.badlogic.gdx.math.Vector2
+import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.InputEvent
+import com.badlogic.gdx.scenes.scene2d.Stage
+import com.badlogic.gdx.scenes.scene2d.Touchable
+import com.badlogic.gdx.scenes.scene2d.ui.*
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
+import com.badlogic.gdx.utils.Align
+import com.badlogic.gdx.utils.Array
+import com.badlogic.gdx.utils.JsonReader
+import com.badlogic.gdx.utils.JsonValue
+import com.badlogic.gdx.utils.viewport.FitViewport
+import java.text.DecimalFormat
+import kotlin.math.pow
+
+class Block {
+    var pos: Vector2? = null
+    var size: Vector2? = null
+    var sprite: Sprite
+
+    enum class dir {
+        LEFT, UP, RIGHT, DOWN
+    }
+
+    constructor(texture: Texture?, startX: Float, startY: Float, sizeX: Float, sizeY: Float) {
+        pos = Vector2(startX, startY)
+        size = Vector2(sizeX, sizeY)
+        sprite = Sprite(texture)
+        sprite.setSize(size!!.x, size!!.y)
+    }
+
+    constructor(texture: Texture?) {
+        sprite = Sprite(texture)
+    }
+
+    fun draw(batch: SpriteBatch?, _pos: Vector2?, _size: Vector2?) {
+        pos = _pos
+        size = _size
+        sprite.setPosition(pos!!.x, pos!!.y)
+        sprite.setSize(size!!.x, size!!.y)
+        sprite.draw(batch)
+    }
+
+    fun move(dx: Float, dy: Float) {
+        pos!!.add(dx, dy)
+        sprite.setPosition(pos!!.x, pos!!.y)
+    }
+
+    fun move(d: dir?) {
+        when (d) {
+            dir.LEFT -> move(-size!!.x, 0f)
+            dir.UP -> move(0f, size!!.y)
+            dir.RIGHT -> move(size!!.x, 0f)
+            dir.DOWN -> move(0f, -size!!.y)
+        }
+    }
+}
+
+
+object Score {
+    var score = 0f
+    var scoreForFullLine = 100f
+    var lineMultiplier = 2
+    var destroyedLines: Int = 0
+
+    fun increaseScore(clearedLines: Int) {
+        score += scoreForFullLine * clearedLines.toFloat().pow(lineMultiplier)
+        destroyedLines += clearedLines
+    }
+}
+
+object Timer {
+    var time: Double = 0.0
+    var timeInterval = 1.0
+}
+
+class TextActor(val text: CharSequence, val posX: Float, val posY: Float) : Actor() {
+
+    var font = BitmapFont(Gdx.files.internal("fonts/myfont.fnt"), Gdx.files.internal("fonts/myfont.png"), false)
+
+    override fun draw(batch: Batch?, parentAlpha: Float) {
+//        super.draw(batch, parentAlpha)
+        font.setColor(0.7f, 1f, 0.5f, 1f)
+
+
+
+        font.draw(batch, text, posX, posY);
+    }
+}
+
+
+class TetrisGame : ApplicationAdapter() {
+    lateinit var batch: SpriteBatch
+    lateinit var fruitsSpritesheetTexture: Texture
+    lateinit var fruitsSpritesheetJson: JsonValue
+
+    lateinit var backgroundTexture: Texture
+
+    var width = 0f
+    var height = 0f
+
+    lateinit var tetrisGrid: TetrisGrid
+    lateinit var tetrisPainter: TetrisPainter
+
+    lateinit var scoreFont: BitmapFont
+    var showBackground = false
+    var showGridLines = false
+
+    var cols: Int = 8
+    var rows: Int = 12
+    var gameSpeed: Int = 1
+    var texturePack: String = ""
+
+    lateinit var menuStage: Stage;
+    lateinit var optionsStage: Stage;
+    lateinit var authorsStage: Stage;
+    lateinit var highscoresStage: Stage;
+
+//    constructor() : super()
+
+
+    enum class GameState {
+        GAME, MAIN_MENU, OPTIONS, AUTHORS, HIGHSCORES
+    }
+
+    var currentState = GameState.MAIN_MENU
+
+    override fun create() {
+
+        // init font
+        val fontGenerator = FreeTypeFontGenerator(Gdx.files.internal("fonts/SnowDream.TTF"))
+        val fontParameter = FreeTypeFontGenerator.FreeTypeFontParameter()
+        fontParameter.size = 24
+        scoreFont = fontGenerator.generateFont(fontParameter)
+        fontGenerator.dispose()
+
+        width = Gdx.graphics.width.toFloat()
+        height = Gdx.graphics.height.toFloat()
+
+
+
+        backgroundTexture = Texture("sprites/bg.png")
+
+        batch = SpriteBatch()
+
+        fruitsSpritesheetTexture = Texture("sprites/characters/spritesheet.png")
+        fruitsSpritesheetJson = JsonReader().parse(Gdx.files.internal("sprites/characters/spritesheet.json"))
+
+
+
+        initGame()
+
+        Gdx.input.inputProcessor = GestureDetector(MyGestureListener(tetrisGrid))
+
+//        scoreFont = BitmapFont(Gdx.files.internal("fonts/myfont.fnt"), Gdx.files.internal("fonts/myfont.png"), false)
+
+
+
+        initMainMenuScreen()
+        initAuthorsScreen()
+        initOptionsScreen()
+    }
+
+
+    fun initOptionsScreen(){
+        val viewport = FitViewport(width/5f, height/5f)
+        optionsStage = Stage(viewport)
+
+        val skin = Skin(Gdx.files.internal("skin/uiskin.json"))
+        val table = Table(skin)
+
+        val btnStyle = TextButton.TextButtonStyle()
+        btnStyle.font = scoreFont
+        btnStyle.fontColor = Color(0.7f, 1f, 0.5f, 1f)
+
+
+        val backBtn = TextButton("Back", btnStyle)
+        backBtn.color = Color(0.7f, 1f, 0.5f, 0.5f)
+        backBtn.touchable = Touchable.enabled
+        backBtn.addListener(object : ClickListener() {
+            override fun clicked(event: InputEvent, x: Float, y: Float) {
+                currentState = GameState.MAIN_MENU
+                Gdx.input.inputProcessor = menuStage
+
+                Gdx.app.log("TAG", "ASDASDASDSAD")
+            }
+        })
+        backBtn.label.setFontScale(0.5f)
+        backBtn.setPosition(0f  - backBtn.width/4,optionsStage.height, Align.topLeft)
+
+
+        val optionsLabel = TextButton("OPTIONS", btnStyle)
+        optionsLabel.setPosition(optionsStage.width/2.0f,optionsStage.height*0.8f, Align.center)
+
+        table.row()
+
+
+        table.add("")
+        table.row()
+        table.add("")
+        table.row()
+
+
+        val speedLabel = Label("Difficulty: 1", skin)
+
+        val speedSlider = Slider(1f, 20f, 1f,false, skin)
+        speedSlider.addListener(object : ChangeListener() {
+            override fun changed(event: ChangeEvent?, actor: Actor?) {
+                speedLabel.setText("Difficulty: " + speedSlider.value.toInt().toString() + "")
+                gameSpeed = speedSlider.value.toInt()
+            }
+        })
+
+        table.add(speedLabel)
+        table.add(speedSlider)
+
+
+        table.row()
+        val textureSelectBox = SelectBox<String>(skin)
+        val nameArray = Array<String>(arrayOf("Filled rects", "Fruits"))
+        textureSelectBox.items = nameArray
+        textureSelectBox.addListener(object : ChangeListener(){
+            override fun changed(event: ChangeEvent?, actor: Actor?) {
+                Gdx.app.log("TAG", textureSelectBox.selected)
+                texturePack = textureSelectBox.selected
+            }
+        })
+
+        table.add("Textures: ")
+        table.add(textureSelectBox)
+
+        table.setFillParent(true)
+//        table.debugAll()
+//        table.touchable = Touchable.enabled
+
+        optionsStage.addActor(backBtn)
+        optionsStage.addActor(optionsLabel)
+        optionsStage.addActor(table)
+
+    }
+
+
+    fun initAuthorsScreen(){
+        val viewport = FitViewport(width/5f, height/5f)
+        authorsStage = Stage(viewport)
+
+
+        val skin = Skin(Gdx.files.internal("skin/uiskin.json"))
+        val table = Table(skin)
+
+
+        table.addListener(object : ClickListener() {
+            override fun clicked(event: InputEvent, x: Float, y: Float) {
+                currentState = GameState.MAIN_MENU
+                Gdx.input.inputProcessor = menuStage
+            }
+        })
+
+
+        val btnStyle = TextButton.TextButtonStyle()
+        btnStyle.font = scoreFont
+        btnStyle.fontColor = Color(0.7f, 1f, 0.5f, 1f)
+
+
+        val developersLabel = TextButton("Developers", btnStyle)
+
+        table.add(developersLabel)
+        table.row().fillX()
+        table.add("")
+        table.row().fillX()
+        table.add("V. Kulinenko")
+        table.row().fillX()
+        table.add("V. Fadeev")
+        table.row().fillX()
+        table.add("V. Yenin")
+
+        table.setFillParent(true)
+//        table.debugAll()
+        table.touchable = Touchable.enabled
+
+        authorsStage.addActor(table)
+    }
+
+    fun initMainMenuScreen(){
+        val viewport = FitViewport(width/5f, height/5f)
+        menuStage = Stage(viewport)
+
+        Gdx.input.inputProcessor = menuStage
+
+        val skin = Skin(Gdx.files.internal("skin/uiskin.json"))
+        val table = Table(skin)
+
+
+        val btnStyle = TextButton.TextButtonStyle()
+        btnStyle.font = scoreFont
+        btnStyle.fontColor = Color(0.7f, 1f, 0.5f, 1f)
+
+
+        val startBtn = TextButton("Start", btnStyle)
+        startBtn.addListener(object : ClickListener() {
+            override fun clicked(event: InputEvent, x: Float, y: Float) {
+                currentState = GameState.GAME
+                Gdx.input.inputProcessor = GestureDetector(MyGestureListener(tetrisGrid))
+            }
+        })
+
+
+        val optionsBtn = TextButton("Options", btnStyle)
+        optionsBtn.addListener(object : ClickListener() {
+            override fun clicked(event: InputEvent, x: Float, y: Float) {
+                currentState = GameState.OPTIONS
+                Gdx.input.inputProcessor = optionsStage
+            }
+        })
+
+        val authorsBtn = TextButton("Authors", btnStyle)
+        authorsBtn.addListener(object : ClickListener() {
+            override fun clicked(event: InputEvent, x: Float, y: Float) {
+                currentState = GameState.AUTHORS
+                Gdx.input.inputProcessor = authorsStage
+            }
+        })
+
+        val highscoresBtn = TextButton("Highscores", btnStyle)
+        highscoresBtn.addListener(object : ClickListener() {
+            override fun clicked(event: InputEvent, x: Float, y: Float) {
+                currentState = GameState.HIGHSCORES
+                Gdx.input.inputProcessor = highscoresStage
+            }
+        })
+
+        val logoTexture = Texture(Gdx.files.internal("sprites/logo/final.png"))
+        val logoImage = Image(logoTexture)
+        logoImage.scaleY = 0.45f
+
+
+        table.add(logoImage)
+        table.row()
+        table.add("")
+        table.row()
+
+        table.add(startBtn)
+        table.row()
+        table.add("")
+        table.row()
+        table.add(highscoresBtn)
+        table.row()
+        table.add("")
+        table.row()
+        table.add(optionsBtn)
+        table.row()
+        table.add("")
+        table.row()
+        table.add(authorsBtn)
+
+
+        table.setPosition(table.x, table.y+50)
+        table.setFillParent(true)
+//        table.debugAll()
+        table.touchable = Touchable.enabled
+
+
+
+        menuStage.addActor(table)
+
+    }
+
+
+    fun initGame() {
+        rows = cols * Gdx.graphics.height / Gdx.graphics.width
+
+        tetrisGrid = TetrisGrid(rows, cols)
+        tetrisPainter = TetrisPainter(tetrisGrid, width.toInt(), height.toInt(), fruitsSpritesheetTexture, fruitsSpritesheetJson)
+        Score.score = 0f
+    }
+
+    override fun render() {
+
+        val bColor = .15f
+        Gdx.gl.glClearColor(bColor, bColor, bColor, 1f)
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
+
+        // game loop
+        when(currentState){
+            GameState.MAIN_MENU -> {
+                menuStage.act()
+                menuStage.draw()
+            }
+            GameState.AUTHORS -> {
+                authorsStage.act()
+                authorsStage.draw()
+            }
+            GameState.GAME -> {
+                render_game()
+            }
+            GameState.OPTIONS -> {
+                optionsStage.act()
+                optionsStage.draw()
+            }
+            GameState.HIGHSCORES -> {
+                highscoresStage.act()
+                highscoresStage.draw()
+            }
+
+        }
+
+
+    }
+
+    fun render_game() {
+        gameUpdate()
+
+
+
+
+        batch.begin()
+        if (showBackground)
+            batch.draw(backgroundTexture, 0f, 0f, height, height)
+
+        // draw text
+        scoreFont.setColor(0.7f, 1f, 0.5f, 1f)
+        scoreFont.draw(batch, "Score: ${DecimalFormat("#,###").format(Score.score)}", 10f, height -1)
+        batch.end()
+
+        if (showGridLines)
+            tetrisPainter.drawGridLines()
+
+        tetrisPainter.drawBlocks()
+    }
+
+    private fun gameUpdate() {
+
+        tickGame()
+
+        if (Gdx.input.isKeyPressed(Input.Keys.ESCAPE)) {
+            Gdx.app.exit()
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
+            tetrisGrid.rotate()
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
+            tetrisGrid.quickFall()
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+            showBackground = !showBackground
+        }
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.G)) {
+            showGridLines = !showGridLines
+        }
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
+            tetrisGrid.shift(Tetromino.moveDirection.LEFT)
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) {
+            tetrisGrid.shift(Tetromino.moveDirection.RIGHT)
+        }
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
+            initGame() // reset
+        }
+
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F3)) {
+            cols++
+            initGame()
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.F1)) {
+            rows++
+            initGame()
+        }
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F4)) {
+            if (cols > 1)
+                cols--
+            initGame()
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.F2)) {
+            if (rows > 1)
+                rows--
+            initGame()
+        }
+    }
+
+    private fun tickGame() {
+        Timer.time += Gdx.graphics.deltaTime
+        if (Timer.time > Timer.timeInterval) {
+            tetrisGrid.fall()
+            Timer.time -= Timer.timeInterval
+        }
+
+        if (Score.destroyedLines > 5 && Timer.timeInterval > 0.15) {
+            Score.destroyedLines -= 5
+            Timer.timeInterval -= 0.3
+        }
+    }
+
+    override fun resize(width: Int, height: Int) {
+        this.width = width.toFloat()
+        this.height = height.toFloat()
+    }
+
+    override fun dispose() {
+        batch.dispose()
+        fruitsSpritesheetTexture.dispose()
+    }
+}
+
+
