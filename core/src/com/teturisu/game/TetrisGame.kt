@@ -3,6 +3,7 @@ package com.teturisu.game
 import com.badlogic.gdx.ApplicationAdapter
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
+import com.badlogic.gdx.Preferences
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.Texture
@@ -125,22 +126,40 @@ class TetrisGame : ApplicationAdapter() {
     var rows: Int = 12
     var gameSpeed: Int = 1
     var texturePack: String = ""
+    lateinit var saveData: Preferences
+
+    val highscoresData = HashMap<String, Int>()
+
 
     lateinit var menuStage: Stage;
     lateinit var optionsStage: Stage;
     lateinit var authorsStage: Stage;
     lateinit var highscoresStage: Stage;
+    lateinit var gameoverStage: Stage;
 
-//    constructor() : super()
 
 
     enum class GameState {
-        GAME, MAIN_MENU, OPTIONS, AUTHORS, HIGHSCORES
+        GAME, MAIN_MENU, OPTIONS, AUTHORS, HIGHSCORES, GAME_OVER
     }
 
-    var currentState = GameState.MAIN_MENU
+    var currentState = GameState.MAIN_MENU // start state
 
     override fun create() {
+
+        // init structure for load/save system
+        saveData = Gdx.app.getPreferences("mysavedata")
+        if (saveData.contains("gameSpeed")) gameSpeed = saveData.getInteger("gameSpeed")
+        if (saveData.contains("texturePack")) texturePack = saveData.getString("texturePack")
+//        saveData.putString("highscores", "p1:12312;p2:123;p3:512;p4:88812;p5:99")
+//        saveData.flush()
+
+        // load hashmap from savedata
+        for (entry in saveData.getString("highscores", "").split(';')) {
+            val (name, scoreStr) = entry.split(':')
+            highscoresData.set(name, scoreStr.toInt())
+        }
+
 
         // init font
         val fontGenerator = FreeTypeFontGenerator(Gdx.files.internal("fonts/SnowDream.TTF"))
@@ -165,7 +184,7 @@ class TetrisGame : ApplicationAdapter() {
 
         initGame()
 
-        Gdx.input.inputProcessor = GestureDetector(MyGestureListener(tetrisGrid))
+//        Gdx.input.inputProcessor = GestureDetector(MyGestureListener(tetrisGrid))
 
 //        scoreFont = BitmapFont(Gdx.files.internal("fonts/myfont.fnt"), Gdx.files.internal("fonts/myfont.png"), false)
 
@@ -174,6 +193,109 @@ class TetrisGame : ApplicationAdapter() {
         initMainMenuScreen()
         initAuthorsScreen()
         initOptionsScreen()
+//        initHighscoreScreen()
+
+        setStage(GameState.MAIN_MENU)
+    }
+
+
+    fun initHighscoreScreen() {
+        val viewport = FitViewport(width/5f, height/5f)
+        highscoresStage = Stage(viewport)
+
+
+        val skin = Skin(Gdx.files.internal("skin/uiskin.json"))
+        val table = Table(skin)
+
+
+        val btnStyle = TextButton.TextButtonStyle()
+        btnStyle.font = scoreFont
+        btnStyle.fontColor = Color(0.7f, 1f, 0.5f, 1f)
+
+
+        val backBtn = TextButton("Back", btnStyle)
+        backBtn.color = Color(0.7f, 1f, 0.5f, 0.5f)
+        backBtn.touchable = Touchable.enabled
+        backBtn.addListener(object : ClickListener() {
+            override fun clicked(event: InputEvent, x: Float, y: Float) {
+                setStage(GameState.MAIN_MENU)
+            }
+        })
+        backBtn.label.setFontScale(0.5f)
+        backBtn.setPosition(0f  - backBtn.width/4,highscoresStage.height, Align.topLeft)
+
+        val highscoresLabel = TextButton("HIGHSCORES", btnStyle)
+        highscoresLabel.setPosition(highscoresStage.width/2.0f,highscoresStage.height*0.8f, Align.center)
+
+
+//        val highscores : List<String> = if (saveData.contains("highscores"))
+//                saveData.getString("highscores").split(';')
+//            else
+//                ArrayList<String>(0)
+
+        val highscoreList = highscoresData.toList().sortedByDescending { it.second }
+
+        // show highscores: name and score
+        table.add("#"); table.add("Name"); table.add("Score"); table.row()
+        for (i in 0 until 5) {
+            val (name, score) = if (highscoreList.size > i) highscoreList[i]  else Pair("---", 0)
+
+            table.add((i+1).toString() + ") "); table.add(name)
+            table.add(score.toString()).expandX(); table.row()
+        }
+
+        table.setFillParent(true)
+//        table.debugAll()
+////        table.touchable = Touchable.enabled
+
+        highscoresStage.addActor(backBtn)
+        highscoresStage.addActor(table)
+    }
+
+
+    fun initGameoverScreen(){
+        val viewport = FitViewport(width/4f, height/4f)
+        gameoverStage = Stage(viewport)
+
+
+        val skin = Skin(Gdx.files.internal("skin/uiskin.json"))
+        val table = Table(skin)
+
+
+        val btnStyle = TextButton.TextButtonStyle()
+        btnStyle.font = scoreFont
+        btnStyle.fontColor = Color(0.7f, 1f, 0.5f, 1f)
+
+
+
+        val nameField = TextField("", skin)
+
+        // button to save highscore
+        val okButton = TextButton("Save", btnStyle)
+        okButton.color = Color(1f, 0.8f, 0.5f, 1f)
+        okButton.touchable = Touchable.enabled
+        okButton.addListener(object : ClickListener() {
+            override fun clicked(event: InputEvent, x: Float, y: Float) {
+                addHighscore(nameField.text, Score.score.toInt())
+                setStage(GameState.HIGHSCORES)
+            }
+        })
+
+
+        val developersLabel = TextButton("Game Over", btnStyle)
+        table.add(developersLabel).colspan(2); table.row()
+        table.add(""); table.row()
+        table.add("Score: "); table.add(Score.score.toInt().toString()); table.row().expandX()
+        table.add("Difficulty: "); table.add("$gameSpeed"); table.row().expandX()
+        table.add("Enter name: ");
+        table.add(nameField); table.row().expandX()
+        table.add(okButton).colspan(2)
+
+        table.setFillParent(true)
+//        table.debugAll()
+        table.touchable = Touchable.enabled
+
+        gameoverStage.addActor(table)
     }
 
 
@@ -194,10 +316,7 @@ class TetrisGame : ApplicationAdapter() {
         backBtn.touchable = Touchable.enabled
         backBtn.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent, x: Float, y: Float) {
-                currentState = GameState.MAIN_MENU
-                Gdx.input.inputProcessor = menuStage
-
-                Gdx.app.log("TAG", "ASDASDASDSAD")
+                setStage(GameState.MAIN_MENU)
             }
         })
         backBtn.label.setFontScale(0.5f)
@@ -207,22 +326,19 @@ class TetrisGame : ApplicationAdapter() {
         val optionsLabel = TextButton("OPTIONS", btnStyle)
         optionsLabel.setPosition(optionsStage.width/2.0f,optionsStage.height*0.8f, Align.center)
 
-        table.row()
+        table.row(); table.add(""); table.row(); table.add(""); table.row()
 
-
-        table.add("")
-        table.row()
-        table.add("")
-        table.row()
-
-
-        val speedLabel = Label("Difficulty: 1", skin)
+        val speedLabel = Label("Difficulty: $gameSpeed", skin)
 
         val speedSlider = Slider(1f, 20f, 1f,false, skin)
+        speedSlider.value = gameSpeed.toFloat()
         speedSlider.addListener(object : ChangeListener() {
             override fun changed(event: ChangeEvent?, actor: Actor?) {
                 speedLabel.setText("Difficulty: " + speedSlider.value.toInt().toString() + "")
                 gameSpeed = speedSlider.value.toInt()
+
+                saveData.putInteger("gameSpeed", gameSpeed)
+                saveData.flush()
             }
         })
 
@@ -232,12 +348,18 @@ class TetrisGame : ApplicationAdapter() {
 
         table.row()
         val textureSelectBox = SelectBox<String>(skin)
-        val nameArray = Array<String>(arrayOf("Filled rects", "Fruits"))
-        textureSelectBox.items = nameArray
+        textureSelectBox.items = Array<String>(arrayOf("Filled rects", "Fruits"))
+
+        if (texturePack.length > 0)
+            textureSelectBox.selected = texturePack
+
         textureSelectBox.addListener(object : ChangeListener(){
             override fun changed(event: ChangeEvent?, actor: Actor?) {
                 Gdx.app.log("TAG", textureSelectBox.selected)
                 texturePack = textureSelectBox.selected
+
+                saveData.putString("texturePack", texturePack)
+                saveData.flush()
             }
         })
 
@@ -254,7 +376,6 @@ class TetrisGame : ApplicationAdapter() {
 
     }
 
-
     fun initAuthorsScreen(){
         val viewport = FitViewport(width/5f, height/5f)
         authorsStage = Stage(viewport)
@@ -266,8 +387,7 @@ class TetrisGame : ApplicationAdapter() {
 
         table.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent, x: Float, y: Float) {
-                currentState = GameState.MAIN_MENU
-                Gdx.input.inputProcessor = menuStage
+                setStage(GameState.MAIN_MENU)
             }
         })
 
@@ -279,14 +399,10 @@ class TetrisGame : ApplicationAdapter() {
 
         val developersLabel = TextButton("Developers", btnStyle)
 
-        table.add(developersLabel)
-        table.row().fillX()
-        table.add("")
-        table.row().fillX()
-        table.add("V. Kulinenko")
-        table.row().fillX()
-        table.add("V. Fadeev")
-        table.row().fillX()
+        table.add(developersLabel); table.row().fillX();
+        table.add(""); table.row().fillX()
+        table.add("V. Kulinenko"); table.row().fillX()
+        table.add("V. Fadeev"); table.row().fillX()
         table.add("V. Yenin")
 
         table.setFillParent(true)
@@ -300,8 +416,6 @@ class TetrisGame : ApplicationAdapter() {
         val viewport = FitViewport(width/5f, height/5f)
         menuStage = Stage(viewport)
 
-        Gdx.input.inputProcessor = menuStage
-
         val skin = Skin(Gdx.files.internal("skin/uiskin.json"))
         val table = Table(skin)
 
@@ -314,8 +428,7 @@ class TetrisGame : ApplicationAdapter() {
         val startBtn = TextButton("Start", btnStyle)
         startBtn.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent, x: Float, y: Float) {
-                currentState = GameState.GAME
-                Gdx.input.inputProcessor = GestureDetector(MyGestureListener(tetrisGrid))
+                setStage(GameState.GAME)
             }
         })
 
@@ -323,24 +436,21 @@ class TetrisGame : ApplicationAdapter() {
         val optionsBtn = TextButton("Options", btnStyle)
         optionsBtn.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent, x: Float, y: Float) {
-                currentState = GameState.OPTIONS
-                Gdx.input.inputProcessor = optionsStage
+                setStage(GameState.OPTIONS)
             }
         })
 
         val authorsBtn = TextButton("Authors", btnStyle)
         authorsBtn.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent, x: Float, y: Float) {
-                currentState = GameState.AUTHORS
-                Gdx.input.inputProcessor = authorsStage
+                setStage(GameState.AUTHORS)
             }
         })
 
         val highscoresBtn = TextButton("Highscores", btnStyle)
         highscoresBtn.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent, x: Float, y: Float) {
-                currentState = GameState.HIGHSCORES
-                Gdx.input.inputProcessor = highscoresStage
+                setStage(GameState.HIGHSCORES)
             }
         })
 
@@ -349,35 +459,46 @@ class TetrisGame : ApplicationAdapter() {
         logoImage.scaleY = 0.45f
 
 
-        table.add(logoImage)
-        table.row()
-        table.add("")
-        table.row()
+        table.add(logoImage); table.row(); table.add(""); table.row()
 
-        table.add(startBtn)
-        table.row()
-        table.add("")
-        table.row()
-        table.add(highscoresBtn)
-        table.row()
-        table.add("")
-        table.row()
-        table.add(optionsBtn)
-        table.row()
-        table.add("")
-        table.row()
+        table.add(startBtn); table.row(); table.add(""); table.row()
+        table.add(highscoresBtn); table.row(); table.add(""); table.row()
+        table.add(optionsBtn); table.row(); table.add(""); table.row()
         table.add(authorsBtn)
-
 
         table.setPosition(table.x, table.y+50)
         table.setFillParent(true)
 //        table.debugAll()
         table.touchable = Touchable.enabled
 
-
-
         menuStage.addActor(table)
+    }
 
+    private fun setStage(stage: TetrisGame.GameState) {
+        currentState = stage
+        when (stage) {
+            GameState.OPTIONS -> {
+                Gdx.input.inputProcessor = optionsStage
+            }
+            GameState.HIGHSCORES -> {
+                initHighscoreScreen()
+                Gdx.input.inputProcessor = highscoresStage
+            }
+            GameState.AUTHORS -> {
+                Gdx.input.inputProcessor = authorsStage
+            }
+            GameState.GAME -> {
+                initGame()
+                Gdx.input.inputProcessor = GestureDetector(MyGestureListener(tetrisGrid))
+            }
+            GameState.MAIN_MENU -> {
+                Gdx.input.inputProcessor = menuStage
+            }
+            GameState.GAME_OVER -> {
+                initGameoverScreen()
+                Gdx.input.inputProcessor = gameoverStage
+            }
+        }
     }
 
 
@@ -416,7 +537,10 @@ class TetrisGame : ApplicationAdapter() {
                 highscoresStage.act()
                 highscoresStage.draw()
             }
-
+            GameState.GAME_OVER -> {
+                gameoverStage.act()
+                gameoverStage.draw()
+            }
         }
 
 
@@ -425,16 +549,13 @@ class TetrisGame : ApplicationAdapter() {
     fun render_game() {
         gameUpdate()
 
-
-
-
         batch.begin()
-        if (showBackground)
-            batch.draw(backgroundTexture, 0f, 0f, height, height)
+            if (showBackground)
+                batch.draw(backgroundTexture, 0f, 0f, height, height)
 
-        // draw text
-        scoreFont.setColor(0.7f, 1f, 0.5f, 1f)
-        scoreFont.draw(batch, "Score: ${DecimalFormat("#,###").format(Score.score)}", 10f, height -1)
+            // draw score
+            scoreFont.setColor(0.7f, 1f, 0.5f, 1f)
+            scoreFont.draw(batch, "Score: ${DecimalFormat("#,###").format(Score.score)}", 10f, height -1)
         batch.end()
 
         if (showGridLines)
@@ -497,14 +618,51 @@ class TetrisGame : ApplicationAdapter() {
 
     private fun tickGame() {
         Timer.time += Gdx.graphics.deltaTime
-        if (Timer.time > Timer.timeInterval) {
+//        if (Timer.time > Timer.timeInterval) {
+//            tetrisGrid.fall()
+//            Timer.time -= Timer.timeInterval
+//
+//        }
+//
+//        if (Score.destroyedLines > 5 && Timer.timeInterval > 0.15) {
+//            Score.destroyedLines -= 5
+//            Timer.timeInterval -= 0.3
+//        }
+
+        val gameDifficulty = 1.0f/gameSpeed*2
+        if (Timer.time > gameDifficulty) {
             tetrisGrid.fall()
-            Timer.time -= Timer.timeInterval
+            Timer.time -= gameDifficulty
+
+            if (tetrisGrid.gameOver) {
+                setStage(GameState.GAME_OVER)
+            }
         }
 
-        if (Score.destroyedLines > 5 && Timer.timeInterval > 0.15) {
+        if (Score.destroyedLines > 5) {
             Score.destroyedLines -= 5
-            Timer.timeInterval -= 0.3
+            gameSpeed += 1
+        }
+    }
+
+    fun addHighscore(name: String, score: Int){
+        if (name.length == 0) return
+
+        val currMin = highscoresData.toList().minBy { it.second }!!.second
+        if (score > currMin) {
+            if (!highscoresData.contains(name) || highscoresData.get(name)!! < score) {
+                highscoresData.put(name, score)
+
+                var entryString = ""
+                // save score
+                for (entry in highscoresData.toList().sortedByDescending { it.second }){
+                    if (entryString.length != 0)
+                        entryString += ";"
+                    entryString += entry.first + ":" + entry.second.toString()
+                }
+                saveData.putString("highscores", entryString)
+                saveData.flush()
+            }
         }
     }
 
@@ -516,6 +674,8 @@ class TetrisGame : ApplicationAdapter() {
     override fun dispose() {
         batch.dispose()
         fruitsSpritesheetTexture.dispose()
+        scoreFont.dispose()
+
     }
 }
 

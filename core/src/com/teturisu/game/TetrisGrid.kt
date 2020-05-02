@@ -6,6 +6,8 @@ class TetrisGrid(var rows: Int, var cols: Int) {
 
     lateinit var activeTetromino: Tetromino
 
+    var gameOver = false
+
     init {
         initGrid()
         spawnTetromino()
@@ -52,7 +54,7 @@ class TetrisGrid(var rows: Int, var cols: Int) {
             activeTetromino.put()
         else {
             println("Game Over?!")
-
+            gameOver = true
 
         }
     }
