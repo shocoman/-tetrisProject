@@ -21,12 +21,12 @@ import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.*
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
-import com.badlogic.gdx.utils.Align
+import com.badlogic.gdx.utils.*
 import com.badlogic.gdx.utils.Array
-import com.badlogic.gdx.utils.JsonReader
-import com.badlogic.gdx.utils.JsonValue
 import com.badlogic.gdx.utils.viewport.FitViewport
 import java.text.DecimalFormat
+import java.util.*
+import kotlin.collections.HashMap
 import kotlin.math.pow
 
 class Block {
@@ -90,19 +90,7 @@ object Timer {
     var timeInterval = 1.0
 }
 
-class TextActor(val text: CharSequence, val posX: Float, val posY: Float) : Actor() {
 
-    var font = BitmapFont(Gdx.files.internal("fonts/myfont.fnt"), Gdx.files.internal("fonts/myfont.png"), false)
-
-    override fun draw(batch: Batch?, parentAlpha: Float) {
-//        super.draw(batch, parentAlpha)
-        font.setColor(0.7f, 1f, 0.5f, 1f)
-
-
-
-        font.draw(batch, text, posX, posY);
-    }
-}
 
 
 class TetrisGame : ApplicationAdapter() {
@@ -131,13 +119,13 @@ class TetrisGame : ApplicationAdapter() {
     val highscoresData = HashMap<String, Int>()
 
 
-    lateinit var menuStage: Stage;
-    lateinit var optionsStage: Stage;
-    lateinit var authorsStage: Stage;
-    lateinit var highscoresStage: Stage;
-    lateinit var gameoverStage: Stage;
+    lateinit var menuStage: Stage
+    lateinit var optionsStage: Stage
+    lateinit var authorsStage: Stage
+    lateinit var highscoresStage: Stage
+    lateinit var gameoverStage: Stage
 
-
+    lateinit var localeBundle: I18NBundle
 
     enum class GameState {
         GAME, MAIN_MENU, OPTIONS, AUTHORS, HIGHSCORES, GAME_OVER
@@ -147,6 +135,9 @@ class TetrisGame : ApplicationAdapter() {
 
     override fun create() {
 
+        localeBundle = I18NBundle.createBundle(Gdx.files.internal("i18n/labels"))
+        Gdx.app.log("TAG",localeBundle.get("backLabel"))
+
         // init structure for load/save system
         saveData = Gdx.app.getPreferences("mysavedata")
         if (saveData.contains("gameSpeed")) gameSpeed = saveData.getInteger("gameSpeed")
@@ -155,16 +146,20 @@ class TetrisGame : ApplicationAdapter() {
 //        saveData.flush()
 
         // load hashmap from savedata
-        for (entry in saveData.getString("highscores", "").split(';')) {
-            val (name, scoreStr) = entry.split(':')
-            highscoresData.set(name, scoreStr.toInt())
+        if (saveData.contains("highscores")) {
+            for (entry in saveData.getString("highscores", "").split(';')) {
+                val (name, scoreStr) = entry.split(':')
+                highscoresData.set(name, scoreStr.toInt())
+            }
         }
 
 
         // init font
-        val fontGenerator = FreeTypeFontGenerator(Gdx.files.internal("fonts/SnowDream.TTF"))
+        val fontGenerator = FreeTypeFontGenerator(Gdx.files.internal("fonts/NewFont.otf"))
         val fontParameter = FreeTypeFontGenerator.FreeTypeFontParameter()
-        fontParameter.size = 24
+        fontParameter.size = 30
+        // add cyrillic chars
+        fontParameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS + "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя";
         scoreFont = fontGenerator.generateFont(fontParameter)
         fontGenerator.dispose()
 
@@ -180,20 +175,6 @@ class TetrisGame : ApplicationAdapter() {
         fruitsSpritesheetTexture = Texture("sprites/characters/spritesheet.png")
         fruitsSpritesheetJson = JsonReader().parse(Gdx.files.internal("sprites/characters/spritesheet.json"))
 
-
-
-        initGame()
-
-//        Gdx.input.inputProcessor = GestureDetector(MyGestureListener(tetrisGrid))
-
-//        scoreFont = BitmapFont(Gdx.files.internal("fonts/myfont.fnt"), Gdx.files.internal("fonts/myfont.png"), false)
-
-
-
-        initMainMenuScreen()
-        initAuthorsScreen()
-        initOptionsScreen()
-//        initHighscoreScreen()
 
         setStage(GameState.MAIN_MENU)
     }
@@ -213,7 +194,7 @@ class TetrisGame : ApplicationAdapter() {
         btnStyle.fontColor = Color(0.7f, 1f, 0.5f, 1f)
 
 
-        val backBtn = TextButton("Back", btnStyle)
+        val backBtn = TextButton(localeBundle.get("backLabel"), btnStyle)
         backBtn.color = Color(0.7f, 1f, 0.5f, 0.5f)
         backBtn.touchable = Touchable.enabled
         backBtn.addListener(object : ClickListener() {
@@ -224,7 +205,7 @@ class TetrisGame : ApplicationAdapter() {
         backBtn.label.setFontScale(0.5f)
         backBtn.setPosition(0f  - backBtn.width/4,highscoresStage.height, Align.topLeft)
 
-        val highscoresLabel = TextButton("HIGHSCORES", btnStyle)
+        val highscoresLabel = TextButton( localeBundle.get("highscoresLabel"), btnStyle)
         highscoresLabel.setPosition(highscoresStage.width/2.0f,highscoresStage.height*0.8f, Align.center)
 
 
@@ -235,6 +216,7 @@ class TetrisGame : ApplicationAdapter() {
 
         val highscoreList = highscoresData.toList().sortedByDescending { it.second }
 
+        table.add(highscoresLabel).colspan(3); table.row(); table.add(""); table.row()
         // show highscores: name and score
         table.add("#"); table.add("Name"); table.add("Score"); table.row()
         for (i in 0 until 5) {
@@ -248,10 +230,10 @@ class TetrisGame : ApplicationAdapter() {
 //        table.debugAll()
 ////        table.touchable = Touchable.enabled
 
+//        highscoresStage.addActor(highscoresLabel)
         highscoresStage.addActor(backBtn)
         highscoresStage.addActor(table)
     }
-
 
     fun initGameoverScreen(){
         val viewport = FitViewport(width/4f, height/4f)
@@ -298,7 +280,6 @@ class TetrisGame : ApplicationAdapter() {
         gameoverStage.addActor(table)
     }
 
-
     fun initOptionsScreen(){
         val viewport = FitViewport(width/5f, height/5f)
         optionsStage = Stage(viewport)
@@ -311,7 +292,7 @@ class TetrisGame : ApplicationAdapter() {
         btnStyle.fontColor = Color(0.7f, 1f, 0.5f, 1f)
 
 
-        val backBtn = TextButton("Back", btnStyle)
+        val backBtn = TextButton(localeBundle.get("backLabel"), btnStyle)
         backBtn.color = Color(0.7f, 1f, 0.5f, 0.5f)
         backBtn.touchable = Touchable.enabled
         backBtn.addListener(object : ClickListener() {
@@ -323,7 +304,7 @@ class TetrisGame : ApplicationAdapter() {
         backBtn.setPosition(0f  - backBtn.width/4,optionsStage.height, Align.topLeft)
 
 
-        val optionsLabel = TextButton("OPTIONS", btnStyle)
+        val optionsLabel = TextButton(localeBundle.get("optionsLabel"), btnStyle)
         optionsLabel.setPosition(optionsStage.width/2.0f,optionsStage.height*0.8f, Align.center)
 
         table.row(); table.add(""); table.row(); table.add(""); table.row()
@@ -346,6 +327,8 @@ class TetrisGame : ApplicationAdapter() {
         table.add(speedSlider)
 
 
+
+
         table.row()
         val textureSelectBox = SelectBox<String>(skin)
         textureSelectBox.items = Array<String>(arrayOf("Filled rects", "Fruits"))
@@ -365,6 +348,29 @@ class TetrisGame : ApplicationAdapter() {
 
         table.add("Textures: ")
         table.add(textureSelectBox)
+        table.row()
+
+
+        val languageSelectBox = SelectBox<String>(skin)
+        languageSelectBox.items = Array<String>(arrayOf("Russian", "English"))
+        if (localeBundle.locale.language == "ru") {
+            languageSelectBox.selected = "Russian"
+        } else if (localeBundle.locale.language == "en") {
+            languageSelectBox.selected = "English"
+        }
+
+        languageSelectBox.addListener(object : ChangeListener(){
+            override fun changed(event: ChangeEvent?, actor: Actor?) {
+                if (languageSelectBox.selected == "English") {
+                    localeBundle = I18NBundle.createBundle(Gdx.files.internal("i18n/labels"), Locale("en"))
+                } else if (languageSelectBox.selected == "Russian") {
+                    localeBundle = I18NBundle.createBundle(Gdx.files.internal("i18n/labels"), Locale("ru"))
+                }
+            }
+        })
+
+        table.add("Language: ")
+        table.add(languageSelectBox)
 
         table.setFillParent(true)
 //        table.debugAll()
@@ -379,7 +385,6 @@ class TetrisGame : ApplicationAdapter() {
     fun initAuthorsScreen(){
         val viewport = FitViewport(width/5f, height/5f)
         authorsStage = Stage(viewport)
-
 
         val skin = Skin(Gdx.files.internal("skin/uiskin.json"))
         val table = Table(skin)
@@ -397,7 +402,7 @@ class TetrisGame : ApplicationAdapter() {
         btnStyle.fontColor = Color(0.7f, 1f, 0.5f, 1f)
 
 
-        val developersLabel = TextButton("Developers", btnStyle)
+        val developersLabel = TextButton(localeBundle.get("developersLabel"), btnStyle)
 
         table.add(developersLabel); table.row().fillX();
         table.add(""); table.row().fillX()
@@ -425,7 +430,7 @@ class TetrisGame : ApplicationAdapter() {
         btnStyle.fontColor = Color(0.7f, 1f, 0.5f, 1f)
 
 
-        val startBtn = TextButton("Start", btnStyle)
+        val startBtn = TextButton(localeBundle.get("startLabel"), btnStyle)
         startBtn.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent, x: Float, y: Float) {
                 setStage(GameState.GAME)
@@ -433,21 +438,21 @@ class TetrisGame : ApplicationAdapter() {
         })
 
 
-        val optionsBtn = TextButton("Options", btnStyle)
+        val optionsBtn = TextButton(localeBundle.get("optionsLabel"), btnStyle)
         optionsBtn.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent, x: Float, y: Float) {
                 setStage(GameState.OPTIONS)
             }
         })
 
-        val authorsBtn = TextButton("Authors", btnStyle)
+        val authorsBtn = TextButton(localeBundle.get("authorsLabel"), btnStyle)
         authorsBtn.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent, x: Float, y: Float) {
                 setStage(GameState.AUTHORS)
             }
         })
 
-        val highscoresBtn = TextButton("Highscores", btnStyle)
+        val highscoresBtn = TextButton(localeBundle.get("highscoresLabel"), btnStyle)
         highscoresBtn.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent, x: Float, y: Float) {
                 setStage(GameState.HIGHSCORES)
@@ -456,7 +461,7 @@ class TetrisGame : ApplicationAdapter() {
 
         val logoTexture = Texture(Gdx.files.internal("sprites/logo/final.png"))
         val logoImage = Image(logoTexture)
-        logoImage.scaleY = 0.45f
+        logoImage.scaleY = 0.75f
 
 
         table.add(logoImage); table.row(); table.add(""); table.row()
@@ -466,7 +471,7 @@ class TetrisGame : ApplicationAdapter() {
         table.add(optionsBtn); table.row(); table.add(""); table.row()
         table.add(authorsBtn)
 
-        table.setPosition(table.x, table.y+50)
+        table.setPosition(table.x, table.y+0)
         table.setFillParent(true)
 //        table.debugAll()
         table.touchable = Touchable.enabled
@@ -478,6 +483,7 @@ class TetrisGame : ApplicationAdapter() {
         currentState = stage
         when (stage) {
             GameState.OPTIONS -> {
+                initOptionsScreen()
                 Gdx.input.inputProcessor = optionsStage
             }
             GameState.HIGHSCORES -> {
@@ -485,6 +491,7 @@ class TetrisGame : ApplicationAdapter() {
                 Gdx.input.inputProcessor = highscoresStage
             }
             GameState.AUTHORS -> {
+                initAuthorsScreen()
                 Gdx.input.inputProcessor = authorsStage
             }
             GameState.GAME -> {
@@ -492,6 +499,7 @@ class TetrisGame : ApplicationAdapter() {
                 Gdx.input.inputProcessor = GestureDetector(MyGestureListener(tetrisGrid))
             }
             GameState.MAIN_MENU -> {
+                initMainMenuScreen()
                 Gdx.input.inputProcessor = menuStage
             }
             GameState.GAME_OVER -> {
@@ -555,7 +563,7 @@ class TetrisGame : ApplicationAdapter() {
 
             // draw score
             scoreFont.setColor(0.7f, 1f, 0.5f, 1f)
-            scoreFont.draw(batch, "Score: ${DecimalFormat("#,###").format(Score.score)}", 10f, height -1)
+            scoreFont.draw(batch, "${localeBundle.get("scoreLabel")}: ${DecimalFormat("#,###").format(Score.score)}", 10f, height -1)
         batch.end()
 
         if (showGridLines)
