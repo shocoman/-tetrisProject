@@ -7,7 +7,6 @@ import com.badlogic.gdx.Preferences
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.Texture
-import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.Sprite
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
@@ -24,6 +23,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.badlogic.gdx.utils.*
 import com.badlogic.gdx.utils.Array
 import com.badlogic.gdx.utils.viewport.FitViewport
+import com.badlogic.gdx.utils.viewport.ScalingViewport
 import java.text.DecimalFormat
 import java.util.*
 import kotlin.collections.HashMap
@@ -106,7 +106,8 @@ class TetrisGame : ApplicationAdapter() {
     lateinit var tetrisGrid: TetrisGrid
     lateinit var tetrisPainter: TetrisPainter
 
-    lateinit var scoreFont: BitmapFont
+    lateinit var coolFont: BitmapFont
+    lateinit var ordinaryFont: BitmapFont
     var showBackground = false
     var showGridLines = false
 
@@ -155,13 +156,24 @@ class TetrisGame : ApplicationAdapter() {
 
 
         // init font
-        val fontGenerator = FreeTypeFontGenerator(Gdx.files.internal("fonts/NewFont.otf"))
-        val fontParameter = FreeTypeFontGenerator.FreeTypeFontParameter()
-        fontParameter.size = 30
+        var fontGenerator = FreeTypeFontGenerator(Gdx.files.internal("fonts/NewFont.otf"))
+        var fontParameter = FreeTypeFontGenerator.FreeTypeFontParameter()
+        fontParameter.size = 50
         // add cyrillic chars
         fontParameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS + "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя";
-        scoreFont = fontGenerator.generateFont(fontParameter)
+        coolFont = fontGenerator.generateFont(fontParameter)
         fontGenerator.dispose()
+
+        fontGenerator = FreeTypeFontGenerator(Gdx.files.internal("fonts/lobster.ttf"))
+        fontParameter = FreeTypeFontGenerator.FreeTypeFontParameter()
+        fontParameter.size = 50
+        // add cyrillic chars
+        fontParameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS + "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя";
+        ordinaryFont = fontGenerator.generateFont(fontParameter)
+        fontGenerator.dispose()
+
+
+
 
         width = Gdx.graphics.width.toFloat()
         height = Gdx.graphics.height.toFloat()
@@ -181,7 +193,7 @@ class TetrisGame : ApplicationAdapter() {
 
 
     fun initHighscoreScreen() {
-        val viewport = FitViewport(width/5f, height/5f)
+        val viewport = FitViewport(width/2f, height/2f)
         highscoresStage = Stage(viewport)
 
 
@@ -190,7 +202,7 @@ class TetrisGame : ApplicationAdapter() {
 
 
         val btnStyle = TextButton.TextButtonStyle()
-        btnStyle.font = scoreFont
+        btnStyle.font = coolFont
         btnStyle.fontColor = Color(0.7f, 1f, 0.5f, 1f)
 
 
@@ -218,12 +230,21 @@ class TetrisGame : ApplicationAdapter() {
 
         table.add(highscoresLabel).colspan(3); table.row(); table.add(""); table.row()
         // show highscores: name and score
-        table.add("#"); table.add("Name"); table.add("Score"); table.row()
+        table.add(Label("#", Label.LabelStyle(ordinaryFont, Color.WHITE)))
+        table.add(Label("Name", Label.LabelStyle(ordinaryFont, Color.WHITE)))
+        table.add(Label("Score", Label.LabelStyle(ordinaryFont, Color.WHITE)))
+//        table.add("#"); table.add("Name"); table.add("Score");
+        table.row()
         for (i in 0 until 5) {
             val (name, score) = if (highscoreList.size > i) highscoreList[i]  else Pair("---", 0)
 
-            table.add((i+1).toString() + ") "); table.add(name)
-            table.add(score.toString()).expandX(); table.row()
+            table.add(Label((i+1).toString() + ") ", Label.LabelStyle(ordinaryFont, Color.WHITE)))
+            table.add(Label(name, Label.LabelStyle(ordinaryFont, Color.WHITE)))
+            table.add(Label(score.toString(), Label.LabelStyle(ordinaryFont, Color.WHITE))).expandX();
+            table.row()
+
+//            table.add((i+1).toString() + ") "); table.add(name)
+//            table.add(score.toString()).expandX(); table.row()
         }
 
         table.setFillParent(true)
@@ -236,7 +257,7 @@ class TetrisGame : ApplicationAdapter() {
     }
 
     fun initGameoverScreen(){
-        val viewport = FitViewport(width/4f, height/4f)
+        val viewport = FitViewport(width/2f, height/2f)
         gameoverStage = Stage(viewport)
 
 
@@ -245,7 +266,7 @@ class TetrisGame : ApplicationAdapter() {
 
 
         val btnStyle = TextButton.TextButtonStyle()
-        btnStyle.font = scoreFont
+        btnStyle.font = coolFont
         btnStyle.fontColor = Color(0.7f, 1f, 0.5f, 1f)
 
 
@@ -281,14 +302,14 @@ class TetrisGame : ApplicationAdapter() {
     }
 
     fun initOptionsScreen(){
-        val viewport = FitViewport(width/5f, height/5f)
+        val viewport = FitViewport(width/2f, height/2f)
         optionsStage = Stage(viewport)
 
         val skin = Skin(Gdx.files.internal("skin/uiskin.json"))
         val table = Table(skin)
 
         val btnStyle = TextButton.TextButtonStyle()
-        btnStyle.font = scoreFont
+        btnStyle.font = coolFont
         btnStyle.fontColor = Color(0.7f, 1f, 0.5f, 1f)
 
 
@@ -309,8 +330,7 @@ class TetrisGame : ApplicationAdapter() {
 
         table.row(); table.add(""); table.row(); table.add(""); table.row()
 
-        val speedLabel = Label("Difficulty: $gameSpeed", skin)
-
+        val speedLabel = Label("Difficulty: $gameSpeed", Label.LabelStyle(ordinaryFont, Color.WHITE))
         val speedSlider = Slider(1f, 20f, 1f,false, skin)
         speedSlider.value = gameSpeed.toFloat()
         speedSlider.addListener(object : ChangeListener() {
@@ -322,9 +342,14 @@ class TetrisGame : ApplicationAdapter() {
                 saveData.flush()
             }
         })
+        speedSlider.style.knob.minHeight = 100f
+        speedSlider.style.knob.minWidth = 50f
+        speedSlider.style.background.minHeight = 50f
 
         table.add(speedLabel)
         table.add(speedSlider)
+
+
 
 
 
@@ -346,7 +371,8 @@ class TetrisGame : ApplicationAdapter() {
             }
         })
 
-        table.add("Textures: ")
+//        table.add("Textures: ")
+        table.add(Label("Textures: ", Label.LabelStyle(ordinaryFont, Color.WHITE)))
         table.add(textureSelectBox)
         table.row()
 
@@ -359,6 +385,9 @@ class TetrisGame : ApplicationAdapter() {
             languageSelectBox.selected = "English"
         }
 
+        languageSelectBox.style.font = ordinaryFont
+        languageSelectBox.style.fontColor = Color.GOLDENROD
+
         languageSelectBox.addListener(object : ChangeListener(){
             override fun changed(event: ChangeEvent?, actor: Actor?) {
                 if (languageSelectBox.selected == "English") {
@@ -369,7 +398,8 @@ class TetrisGame : ApplicationAdapter() {
             }
         })
 
-        table.add("Language: ")
+//        table.add("Language: ")
+        table.add(Label("Language: ", Label.LabelStyle(ordinaryFont, Color.WHITE)))
         table.add(languageSelectBox)
 
         table.setFillParent(true)
@@ -383,7 +413,8 @@ class TetrisGame : ApplicationAdapter() {
     }
 
     fun initAuthorsScreen(){
-        val viewport = FitViewport(width/5f, height/5f)
+        val viewport = ScalingViewport(Scaling.fill, width/2, height/2)
+
         authorsStage = Stage(viewport)
 
         val skin = Skin(Gdx.files.internal("skin/uiskin.json"))
@@ -398,7 +429,7 @@ class TetrisGame : ApplicationAdapter() {
 
 
         val btnStyle = TextButton.TextButtonStyle()
-        btnStyle.font = scoreFont
+        btnStyle.font = coolFont
         btnStyle.fontColor = Color(0.7f, 1f, 0.5f, 1f)
 
 
@@ -406,9 +437,14 @@ class TetrisGame : ApplicationAdapter() {
 
         table.add(developersLabel); table.row().fillX();
         table.add(""); table.row().fillX()
-        table.add("V. Kulinenko"); table.row().fillX()
-        table.add("V. Fadeev"); table.row().fillX()
-        table.add("V. Yenin")
+//        table.add("V. Kulinenko");
+        table.add(Label("V. Kulineнко", Label.LabelStyle(ordinaryFont, Color.WHITE)))
+        table.row().fillX()
+//        table.add("V. Fadeev");
+        table.add(Label("V. Fadeev", Label.LabelStyle(ordinaryFont, Color.WHITE)))
+        table.row().fillX()
+//        table.add("V. Yenin")
+        table.add(Label("V. Yenin", Label.LabelStyle(ordinaryFont, Color.WHITE)))
 
         table.setFillParent(true)
 //        table.debugAll()
@@ -418,7 +454,7 @@ class TetrisGame : ApplicationAdapter() {
     }
 
     fun initMainMenuScreen(){
-        val viewport = FitViewport(width/5f, height/5f)
+        val viewport = FitViewport(width/2f, height/2f)
         menuStage = Stage(viewport)
 
         val skin = Skin(Gdx.files.internal("skin/uiskin.json"))
@@ -426,7 +462,7 @@ class TetrisGame : ApplicationAdapter() {
 
 
         val btnStyle = TextButton.TextButtonStyle()
-        btnStyle.font = scoreFont
+        btnStyle.font = coolFont
         btnStyle.fontColor = Color(0.7f, 1f, 0.5f, 1f)
 
 
@@ -461,7 +497,7 @@ class TetrisGame : ApplicationAdapter() {
 
         val logoTexture = Texture(Gdx.files.internal("sprites/logo/final.png"))
         val logoImage = Image(logoTexture)
-        logoImage.scaleY = 0.75f
+        logoImage.setScaling(Scaling.fit);
 
 
         table.add(logoImage); table.row(); table.add(""); table.row()
@@ -562,8 +598,8 @@ class TetrisGame : ApplicationAdapter() {
                 batch.draw(backgroundTexture, 0f, 0f, height, height)
 
             // draw score
-            scoreFont.setColor(0.7f, 1f, 0.5f, 1f)
-            scoreFont.draw(batch, "${localeBundle.get("scoreLabel")}: ${DecimalFormat("#,###").format(Score.score)}", 10f, height -1)
+            coolFont.setColor(0.7f, 1f, 0.5f, 1f)
+            coolFont.draw(batch, "${localeBundle.get("scoreLabel")}: ${DecimalFormat("#,###").format(Score.score)}", 10f, height -1)
         batch.end()
 
         if (showGridLines)
@@ -682,7 +718,7 @@ class TetrisGame : ApplicationAdapter() {
     override fun dispose() {
         batch.dispose()
         fruitsSpritesheetTexture.dispose()
-        scoreFont.dispose()
+        coolFont.dispose()
 
     }
 }
