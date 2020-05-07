@@ -3,6 +3,9 @@ package com.teturisu.game
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.input.GestureDetector.GestureListener
 import com.badlogic.gdx.math.Vector2
+import com.teturisu.game.TheGame.TetrisGrid
+import com.teturisu.game.TheGame.Tetromino
+import com.teturisu.game.TheGame.Timer
 
 class MyGestureListener(grid: TetrisGrid) : GestureListener {
     val tetrisGrid = grid

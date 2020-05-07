@@ -1,4 +1,4 @@
-package com.teturisu.game
+package com.teturisu.game.TheGame
 
 
 class TetrisGrid(var rows: Int, var cols: Int) {

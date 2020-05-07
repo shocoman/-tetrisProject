@@ -3,7 +3,8 @@ package com.teturisu.game.client;
 import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.backends.gwt.GwtApplication;
 import com.badlogic.gdx.backends.gwt.GwtApplicationConfiguration;
-import com.teturisu.game.TetrisGame;
+import com.teturisu.game.MenuUI.TetrisMainMenu;
+import com.teturisu.game.TheGame.TetrisGame;
 
 public class HtmlLauncher extends GwtApplication {
 
@@ -46,6 +47,6 @@ public class HtmlLauncher extends GwtApplication {
 
         @Override
         public ApplicationListener createApplicationListener () {
-                return new TetrisGame();
+                return new TetrisMainMenu();
         }
 }
