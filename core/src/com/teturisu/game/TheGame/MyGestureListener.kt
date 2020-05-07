@@ -1,20 +1,29 @@
-package com.teturisu.game
+package com.teturisu.game.TheGame
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.input.GestureDetector.GestureListener
 import com.badlogic.gdx.math.Vector2
-import com.teturisu.game.TheGame.TetrisGrid
-import com.teturisu.game.TheGame.Tetromino
-import com.teturisu.game.TheGame.Timer
+import com.teturisu.game.Utilities
 
-class MyGestureListener(grid: TetrisGrid) : GestureListener {
-    val tetrisGrid = grid
+class MyGestureListener(val tetrisGame: TetrisGame) : GestureListener {
+    val tetrisGrid = tetrisGame.tetrisGrid
 
     override fun touchDown(x: Float, y: Float, pointer: Int, button: Int): Boolean {
         return false
     }
 
     override fun tap(x: Float, y: Float, count: Int, button: Int): Boolean {
+        // check pause button press
+        val width = Gdx.graphics.width.toFloat()
+        val height = Gdx.graphics.height.toFloat()
+        val layout = tetrisGame.pauseBtnLayout
+        if (x > width - layout.width && y < layout.height){
+            tetrisGrid.gamePaused = true;
+
+            return false
+        }
+
+
         if (count == 1)
             tetrisGrid.rotate()
 

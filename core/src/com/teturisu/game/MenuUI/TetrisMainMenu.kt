@@ -7,12 +7,13 @@ import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.input.GestureDetector
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.utils.I18NBundle
 import com.badlogic.gdx.utils.JsonReader
 import com.badlogic.gdx.utils.JsonValue
-import com.teturisu.game.MyGestureListener
+import com.teturisu.game.TheGame.MyGestureListener
 import com.teturisu.game.TheGame.TetrisGame
 
 
@@ -97,8 +98,8 @@ class TetrisMainMenu : ApplicationAdapter() {
         backTexture = Texture("sprites/bg.png")
 
         // default texture pack
-//        spritesheetTexture = Texture("sprites/textures/original/spritesheet.png")
-//        spritesheetJson = JsonReader().parse(Gdx.files.internal("sprites/textures/original/spritesheet.json"))
+        spritesheetTexture = Texture("sprites/textures/original/spritesheet.png")
+        spritesheetJson = JsonReader().parse(Gdx.files.internal("sprites/textures/original/spritesheet.json"))
 
         theGame = TetrisGame(backTexture, localeBundle, cartoonFont)
 
@@ -122,7 +123,7 @@ class TetrisMainMenu : ApplicationAdapter() {
             }
             GameState.GAME -> {
                 theGame.initGame()
-                Gdx.input.inputProcessor = GestureDetector(MyGestureListener(theGame.tetrisGrid))
+                Gdx.input.inputProcessor = GestureDetector(MyGestureListener(theGame))
             }
             GameState.MAIN_MENU -> {
                 initMainMenuScreen()
@@ -138,8 +139,14 @@ class TetrisMainMenu : ApplicationAdapter() {
 
     override fun render() {
         val bColor = .15f
+
         Gdx.gl.glClearColor(bColor, bColor, bColor, 1f)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
+
+        // if game is paused render but don't update
+        if (theGame.tetrisGrid.gamePaused) {
+            theGame.render_game(spritesheetTexture, spritesheetJson, simpleGraphics)
+        }
 
         // game loop
         when(currentState){
@@ -170,7 +177,12 @@ class TetrisMainMenu : ApplicationAdapter() {
     }
 
     private fun update_the_game() {
+        theGame.gameUpdate()
         theGame.render_game(spritesheetTexture, spritesheetJson, simpleGraphics)
+
+        if (theGame.tetrisGrid.gamePaused) {
+            setStage(GameState.MAIN_MENU)
+        }
 
         if (theGame.tetrisGrid.gameOver) {
             setStage(GameState.GAME_OVER)

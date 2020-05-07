@@ -6,6 +6,7 @@ class TetrisGrid(var rows: Int, var cols: Int) {
 
     lateinit var activeTetromino: Tetromino
 
+    var gamePaused = false
     var gameOver = false
 
     init {

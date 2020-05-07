@@ -2,6 +2,7 @@ package com.teturisu.game.TheGame
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
@@ -82,8 +83,16 @@ class TetrisPainter(var tetrisGrid: TetrisGrid, var screenWidth: Int, var screen
             spriteRenderer.end()
         }
 
-
-
+        // dark transparent background while game paused
+        if (tetrisGrid.gamePaused){
+            Gdx.gl.glEnable(GL20.GL_BLEND)
+            Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA)
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+            shapeRenderer.color = Color(0f, 0f, 0f, 0.5f)
+            shapeRenderer.rect(0f, 0f, screenWidth.toFloat(), screenHeight.toFloat())
+            shapeRenderer.end()
+            Gdx.gl.glDisable(GL20.GL_BLEND)
+        }
     }
 
     fun drawBlock(x: Float, y: Float, w: Float, h: Float, ch: Char, isBorder: Boolean = false) {

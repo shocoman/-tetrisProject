@@ -5,7 +5,9 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.BitmapFont
+import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.badlogic.gdx.utils.Align
 import com.badlogic.gdx.utils.I18NBundle
 import com.badlogic.gdx.utils.JsonValue
 import java.text.DecimalFormat
@@ -36,18 +38,17 @@ class TetrisGame(val backTexture: Texture, val localeBundle: I18NBundle, var car
 
     var width = Gdx.graphics.width.toFloat()
     var height = Gdx.graphics.height.toFloat()
-
-    lateinit var tetrisGrid: TetrisGrid
-    lateinit var tetrisPainter: TetrisPainter
-
-
-    var showBackground = false
-    var showGridLines = false
+    var pauseBtnLayout = GlyphLayout()
 
     var cols: Int = 8
     var rows: Int = 12
     var gameSpeed: Int = 2
 
+    var tetrisGrid = TetrisGrid(rows, cols)
+    lateinit var tetrisPainter: TetrisPainter
+
+    var showBackground = false
+    var showGridLines = false
 
     override fun create() {
         width = Gdx.graphics.width.toFloat()
@@ -64,16 +65,19 @@ class TetrisGame(val backTexture: Texture, val localeBundle: I18NBundle, var car
     }
 
     fun render_game(spritesheetTexture: Texture, spritesheetJson: JsonValue, simpleGraphics: Boolean) {
-        gameUpdate()
-
         batch.begin()
             if (showBackground)
                 batch.draw(backTexture, 0f, 0f, height, height)
 
-            // draw score
+            // draw score label
             cartoonFont.setColor(0.7f, 1f, 0.5f, 1f)
-           // cartoonFont.draw(batch, "${localeBundle.get("scoreLabel")}: ${DecimalFormat("#,###")
-             //       .format(Score.score)}", 10f, height-1)
+            cartoonFont.draw(batch, "${localeBundle.get("scoreLabel")}: ${DecimalFormat("#,###")
+                    .format(Score.score)}", 10f, height-1)
+
+            // draw 'pause' button
+            pauseBtnLayout = cartoonFont.draw(batch, localeBundle.get("pauseLabel"), width-1, height-1, 0f, Align.right, false)
+
+
         batch.end()
 
         if (showGridLines)
@@ -82,7 +86,7 @@ class TetrisGame(val backTexture: Texture, val localeBundle: I18NBundle, var car
         tetrisPainter.drawBlocks(spritesheetTexture, spritesheetJson, simpleGraphics)
     }
 
-    private fun gameUpdate() {
+    fun gameUpdate() {
         tickGame()
         updateControls()
     }
