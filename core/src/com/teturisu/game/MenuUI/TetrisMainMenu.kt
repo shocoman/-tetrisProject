@@ -77,6 +77,7 @@ class TetrisMainMenu : ApplicationAdapter() {
 
             Gdx.app.log("TAG",texturePack)
             changeSpritesheet(texturePack)
+//            changeSpritesheet("Simple")
         }
 
         // load highscore from save data if any exists
@@ -96,8 +97,8 @@ class TetrisMainMenu : ApplicationAdapter() {
         backTexture = Texture("sprites/bg.png")
 
         // default texture pack
-        spritesheetTexture = Texture("sprites/textures/original/spritesheet.png")
-        spritesheetJson = JsonReader().parse(Gdx.files.internal("sprites/textures/original/spritesheet.json"))
+//        spritesheetTexture = Texture("sprites/textures/original/spritesheet.png")
+//        spritesheetJson = JsonReader().parse(Gdx.files.internal("sprites/textures/original/spritesheet.json"))
 
         theGame = TetrisGame(backTexture, localeBundle, cartoonFont)
 

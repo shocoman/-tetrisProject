@@ -52,7 +52,6 @@ class TetrisGame(val backTexture: Texture, val localeBundle: I18NBundle, var car
     override fun create() {
         width = Gdx.graphics.width.toFloat()
         height = Gdx.graphics.height.toFloat()
-
     }
 
 
@@ -73,8 +72,8 @@ class TetrisGame(val backTexture: Texture, val localeBundle: I18NBundle, var car
 
             // draw score
             cartoonFont.setColor(0.7f, 1f, 0.5f, 1f)
-            cartoonFont.draw(batch, "${localeBundle.get("scoreLabel")}: ${DecimalFormat("#,###")
-                    .format(Score.score)}", 10f, height-1)
+           // cartoonFont.draw(batch, "${localeBundle.get("scoreLabel")}: ${DecimalFormat("#,###")
+             //       .format(Score.score)}", 10f, height-1)
         batch.end()
 
         if (showGridLines)

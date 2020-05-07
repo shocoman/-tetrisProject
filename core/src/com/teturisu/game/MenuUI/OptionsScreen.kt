@@ -145,10 +145,8 @@ fun TetrisMainMenu.initOptionsScreen(){
     table.add(Label(localeBundle.get("languageLabel") + ": ", Label.LabelStyle(ordinaryFont, Color.WHITE))).left()
     table.add(languageSelectBox).fillX()
     table.setFillParent(true)
-    table.debugAll()
 
     optionsStage.addActor(backBtn)
     optionsStage.addActor(optionsLabel)
     optionsStage.addActor(table)
-
 }

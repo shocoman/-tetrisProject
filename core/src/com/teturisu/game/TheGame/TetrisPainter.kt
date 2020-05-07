@@ -88,13 +88,13 @@ class TetrisPainter(var tetrisGrid: TetrisGrid, var screenWidth: Int, var screen
 
     fun drawBlock(x: Float, y: Float, w: Float, h: Float, ch: Char, isBorder: Boolean = false) {
         shapeRenderer.color = getColor(ch)
-
+        val pad = 3;
         if (isBorder) {
             shapeRenderer.color = Color.GRAY
             Gdx.gl20.glLineWidth(6f)
-            shapeRenderer.rect(x, y, w, h)
+            shapeRenderer.rect(x+pad, y+pad, w-2*pad, h-2*pad)
         } else {
-            shapeRenderer.rect(x, y, w, h)
+            shapeRenderer.rect(x+pad, y+pad, w-2*pad, h-2*pad)
         }
     }
 
@@ -109,32 +109,36 @@ class TetrisPainter(var tetrisGrid: TetrisGrid, var screenWidth: Int, var screen
     }
 
     private fun getColor(ch: Char): Color {
-        return when (ch) {
+
+        return when (if (ch.isLowerCase()) ch.toUpperCase()
+                        else ch.toLowerCase())
+        {
+
             // blue
-            'A' -> Color.valueOf("#0c7b93")
-            'a' -> Color.valueOf("#27496d")
+            'A' -> Color.valueOf("#54d6f1") // staying color
+            'a' -> Color.valueOf("#095666") // moving color
 
             // mint (greenish?)
             'B' -> Color.valueOf("#00CF91")
-            'b' -> Color.valueOf("#004631")
+            'b' -> Color.valueOf("#006244")
 
             // orange
-            'C' -> Color.valueOf("#6f5a7e")
-            'c' -> Color.valueOf("#ffae8f")
+            'C' -> Color.valueOf("#b0a0bc")
+            'c' -> Color.valueOf("#554561")
 
             // purple
-            'D' -> Color.valueOf("#F375F3")
-            'd' -> Color.valueOf("#6A2F6A")
+            'D' -> Color.valueOf("#dde809")
+            'd' -> Color.valueOf("#626703")
 
             // skin color???
-            'E' -> Color.valueOf("#ff4d4d")
-            'e' -> Color.valueOf("#912E00")
+            'E' -> Color.valueOf("#ff7979")
+            'e' -> Color.valueOf("#880000")
 
             'G' -> Color.valueOf("#df87b0")
             'g' -> Color.valueOf("#ac152d")
 
-            'F' -> Color.valueOf("#8e6d2b")
-            'f' -> Color.valueOf("#9b7846")
+            'F' -> Color.valueOf("#cba556")
+            'f' -> Color.valueOf("#7e6227")
 
             else -> {
                 Color.valueOf("#FFFFFF")
