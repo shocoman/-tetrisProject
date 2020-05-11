@@ -14,27 +14,6 @@ import com.badlogic.gdx.utils.viewport.FitViewport
 import com.teturisu.game.TheGame.Score
 
 
-fun TetrisMainMenu.addHighscore(name: String, score: Int){
-    if (name.isEmpty()) return
-
-    val currMin = highscoresData.toList().minBy { it.second }!!.second
-    if (score > currMin) {
-        if (!highscoresData.contains(name) || highscoresData.get(name)!! < score) {
-            highscoresData.put(name, score)
-
-            var entryString = ""
-            // save score
-            for (entry in highscoresData.toList().sortedByDescending { it.second }){
-                if (entryString.isNotEmpty())
-                    entryString += ";"
-                entryString += entry.first + ":" + entry.second.toString()
-            }
-            saveData.putString("highscores", entryString)
-            saveData.flush()
-        }
-    }
-}
-
 
 fun TetrisMainMenu.initGameoverScreen(){
     val viewport = FitViewport(width/2f, height/2f)

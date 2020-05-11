@@ -4,13 +4,16 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.graphics.g2d.Sprite
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
+import com.badlogic.gdx.math.Interpolation
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.utils.JsonValue
+import kotlin.math.PI
 
 
-class TetrisPainter(var tetrisGrid: TetrisGrid, var screenWidth: Int, var screenHeight: Int) {
+class TetrisPainter(var tetrisLogic: TetrisLogic, var screenWidth: Int, var screenHeight: Int) {
     var offsetX = 0f
     var offsetY = 0f
     var rows: Int
@@ -19,64 +22,81 @@ class TetrisPainter(var tetrisGrid: TetrisGrid, var screenWidth: Int, var screen
     var shapeRenderer: ShapeRenderer
     var spriteRenderer: SpriteBatch
 
-    var angleForStopppedCells = 0f
-
     data class FrameData(val x: Int, val y: Int, val w: Int, val h: Int)
+
+    init {
+        shapeRenderer = ShapeRenderer()
+        spriteRenderer = SpriteBatch()
+        val w = screenWidth.toFloat() / tetrisLogic.cols.toFloat()
+        val h = screenHeight.toFloat() / tetrisLogic.rows.toFloat()
+        blockSize = Vector2(w, h)
+        rows = tetrisLogic.rows
+        cols = tetrisLogic.cols
+    }
 
 
     fun drawBlocks(spritesheetTexture: Texture, spritesheetJson: JsonValue, simpleGraphics: Boolean) {
 
         if (simpleGraphics) {
             // Draw tetromino with rects
-            // draw border
+            // draw border and filled rects
             shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
             for (row in 0 until rows) {
                 for (col in 0 until cols) {
-                    if (tetrisGrid.gameGrid[row][col] != ' ') {
-                        val x = offsetX + col * blockSize.x
-                        val y = offsetY + row * blockSize.y
-                        drawBlock(x, y, blockSize.x, blockSize.y, tetrisGrid.gameGrid[row][col], isBorder = true)
-                    }
-                }
-            }
-            shapeRenderer.end()
-
-            //  draw filled rects
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-            for (row in 0 until rows) {
-                for (col in 0 until cols) {
-                    val currentCell = tetrisGrid.gameGrid[row][col]
+                    val currentCell = tetrisLogic.gameGrid[row][col]
                     if (currentCell != ' ') {
                         val x = offsetX + col * blockSize.x
                         val y = offsetY + row * blockSize.y
-                        drawBlock(x, y, blockSize.x, blockSize.y, currentCell)
+                        drawBlock(x, y, blockSize.x, blockSize.y, currentCell, true)
                     }
                 }
             }
             shapeRenderer.end()
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+            for (row in 0 until rows) {
+                for (col in 0 until cols) {
+                    val currentCell = tetrisLogic.gameGrid[row][col]
+                    if (currentCell != ' ') {
+                        val x = offsetX + col * blockSize.x
+                        val y = offsetY + row * blockSize.y
+                        drawBlock(x, y, blockSize.x, blockSize.y, currentCell, false)
+                    }
+                }
+            }
+
+            shapeRenderer.end()
         } else {
             // Draw tetrominoes with sprites
-            val rotate = false;
-            angleForStopppedCells += .25f
             spriteRenderer.begin()
             for (row in 0 until rows) {
                 for (col in 0 until cols) {
 
-                    val currentCell = tetrisGrid.gameGrid[row][col]
+                    val currentCell = tetrisLogic.gameGrid[row][col]
                     if (currentCell != ' ') {
                         val (srcX, srcY, srcW, srcH) = getCoords(spritesheetJson, getSpriteNum(currentCell))
                         val x = offsetX + col * blockSize.x
                         val y = offsetY + row * blockSize.y
 
-                        val (originX, originY) = Pair(blockSize.x / 2, blockSize.y / 2)
-                        val (scaleX, scaleY) = Pair(1f, 1f)
-                        var rotation = if (currentCell.isLowerCase())
-                                            -tetrisGrid.activeTetromino.angle.toFloat()
-                                        else angleForStopppedCells
-                        if (!rotate) rotation = 0f
+                        var rotation = 0f
+                        var (w, h) = Pair(blockSize.x, blockSize.y)
 
-                        spriteRenderer.draw(spritesheetTexture, x, y, originX, originY, blockSize.x, blockSize.y,
-                                scaleX, scaleY, rotation, srcX, srcY, srcW, srcH, false, false)
+                        val col = spriteRenderer.color
+                        if (row !in tetrisLogic.linesToRemove){
+                            rotation = 0f
+                        } else {
+                            // interpolate Timer.time between 0(?) and getDifficulty()
+                            val interp = Interpolation.circleOut
+                            rotation = interp.apply(0F, 360F, Timer.time.toFloat()/tetrisLogic.getDiffuculty())
+                            w = interp.apply(blockSize.x, 0f, Timer.time.toFloat()/tetrisLogic.getDiffuculty())
+                            h = interp.apply(blockSize.y, 0f, Timer.time.toFloat()/tetrisLogic.getDiffuculty())
+
+                            val alpha = interp.apply(1f, 0f, Timer.time.toFloat()/tetrisLogic.getDiffuculty())
+                            spriteRenderer.setColor(col.r, col.g, col.b, alpha)
+                        }
+
+                        spriteRenderer.draw(spritesheetTexture, x+(blockSize.x-w)/2, y+(blockSize.y-h)/2,
+                                w/2, h/2, w, h, 1f, 1f, rotation, srcX, srcY, srcW, srcH, false, false)
+                        spriteRenderer.setColor(col.r, col.g, col.b, 1f)
                     }
                 }
             }
@@ -84,11 +104,11 @@ class TetrisPainter(var tetrisGrid: TetrisGrid, var screenWidth: Int, var screen
         }
 
         // dark transparent background while game paused
-        if (tetrisGrid.gamePaused){
+        if (tetrisLogic.gamePaused){
             Gdx.gl.glEnable(GL20.GL_BLEND)
             Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA)
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-            shapeRenderer.color = Color(0f, 0f, 0f, 0.5f)
+            shapeRenderer.color = Color(0f, 0f, 0f, 0.7f)
             shapeRenderer.rect(0f, 0f, screenWidth.toFloat(), screenHeight.toFloat())
             shapeRenderer.end()
             Gdx.gl.glDisable(GL20.GL_BLEND)
@@ -153,33 +173,6 @@ class TetrisPainter(var tetrisGrid: TetrisGrid, var screenWidth: Int, var screen
                 Color.valueOf("#FFFFFF")
             }
         }
-
-//        return when (ch) {
-//            // floor
-//            'F' -> Color.valueOf("#1E3C00")
-//
-//            // blue
-//            'A' -> Color.valueOf("#0c7b93")
-//            'a' -> Color.valueOf("#27496d")
-//
-//            // mint (greenish?)
-//            'B' -> Color.valueOf("#00CF91")
-//            'b' -> Color.valueOf("#004631")
-//
-//            // orange
-//            'c' -> Color.valueOf("#ffae8f")
-//            'C' -> Color.valueOf("#6f5a7e")
-//
-//            // purple
-//            'D' -> Color.valueOf("#F375F3")
-//            'd' -> Color.valueOf("#6A2F6A")
-//
-//            // skin color???
-//            'E' -> Color.valueOf("#ff9d9d")
-//            'e' -> Color.valueOf("#912E00")
-//
-//            else -> Color.valueOf("#FFFFFF")
-//        }
     }
 
     fun drawGridLines() {
@@ -201,13 +194,4 @@ class TetrisPainter(var tetrisGrid: TetrisGrid, var screenWidth: Int, var screen
         offsetY = dy
     }
 
-    init {
-        shapeRenderer = ShapeRenderer()
-        spriteRenderer = SpriteBatch()
-        val w = screenWidth.toFloat() / tetrisGrid.cols.toFloat()
-        val h = screenHeight.toFloat() / tetrisGrid.rows.toFloat()
-        blockSize = Vector2(w, h)
-        rows = tetrisGrid.rows
-        cols = tetrisGrid.cols
-    }
 }

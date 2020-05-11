@@ -7,7 +7,6 @@ import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.input.GestureDetector
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.utils.I18NBundle
@@ -84,8 +83,10 @@ class TetrisMainMenu : ApplicationAdapter() {
         // load highscore from save data if any exists
         if (saveData.contains("highscores")) {
             for (entry in saveData.getString("highscores", "").split(';')) {
-                val (name, scoreStr) = entry.split(':')
-                highscoresData.set(name, scoreStr.toInt())
+                if (entry.contains(':')) {
+                    val (name, scoreStr) = entry.split(':')
+                    highscoresData.set(name, scoreStr.toInt())
+                }
             }
         }
 
@@ -123,7 +124,6 @@ class TetrisMainMenu : ApplicationAdapter() {
             }
             GameState.GAME -> {
                 theGame.initGame()
-                Gdx.input.inputProcessor = GestureDetector(MyGestureListener(theGame))
             }
             GameState.MAIN_MENU -> {
                 initMainMenuScreen()
@@ -144,7 +144,7 @@ class TetrisMainMenu : ApplicationAdapter() {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
 
         // if game is paused render but don't update
-        if (theGame.tetrisGrid.gamePaused) {
+        if (theGame.tetrisLogic.gamePaused) {
             theGame.render_game(spritesheetTexture, spritesheetJson, simpleGraphics)
         }
 
@@ -180,11 +180,11 @@ class TetrisMainMenu : ApplicationAdapter() {
         theGame.gameUpdate()
         theGame.render_game(spritesheetTexture, spritesheetJson, simpleGraphics)
 
-        if (theGame.tetrisGrid.gamePaused) {
+        if (theGame.tetrisLogic.gamePaused) {
             setStage(GameState.MAIN_MENU)
         }
 
-        if (theGame.tetrisGrid.gameOver) {
+        if (theGame.tetrisLogic.gameOver) {
             setStage(GameState.GAME_OVER)
         }
     }

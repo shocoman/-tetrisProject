@@ -1,10 +1,13 @@
 package com.teturisu.game.TheGame
 
 
-class TetrisGrid(var rows: Int, var cols: Int) {
+class TetrisLogic(var rows: Int, var cols: Int) {
     var gameGrid: Array<CharArray> = Array(rows) { CharArray(cols) }
 
     lateinit var activeTetromino: Tetromino
+    var linesToRemove = emptyArray<Int>()
+    var spawnNextTurn = false
+    var gameSpeed = 2
 
     var gamePaused = false
     var gameOver = false
@@ -18,21 +21,32 @@ class TetrisGrid(var rows: Int, var cols: Int) {
         for (row in 0 until rows) {
             for (col in 0 until cols) {
                 gameGrid[row][col] = ' '
-//                if (row == 0 && col < 3) gameGrid[row][col] = 'F'
             }
         }
     }
 
     fun fall() {
-        if (!activeTetromino.move()) {
-            makeThemStop()
+        if (spawnNextTurn) {
             spawnTetromino()
+            spawnNextTurn = false
+        } else {
+            val hasMoved = activeTetromino.move()
+
+            if (!hasMoved) {
+                makeThemStop()
+                if (linesToRemove.isEmpty())
+                    spawnTetromino()
+                else
+                    spawnNextTurn = true
+            }
         }
     }
 
     fun quickFall() {
-        activeTetromino.quickFall()
-        Timer.time = Timer.timeInterval*8/10
+        if (!spawnNextTurn) {
+            activeTetromino.quickFall()
+            Timer.time = Timer.timeInterval * 8 / 10
+        }
     }
 
     fun makeThemStop() {
@@ -42,7 +56,7 @@ class TetrisGrid(var rows: Int, var cols: Int) {
             }
         }
 
-        clearFullLines()
+        markFullLines()
     }
 
     fun shift(dir: Tetromino.moveDirection) {
@@ -56,27 +70,35 @@ class TetrisGrid(var rows: Int, var cols: Int) {
         else {
             println("Game Over?!")
             gameOver = true
-
         }
+
+        removeFullLines()
     }
 
     fun rotate() {
         activeTetromino.rotate()
     }
 
-    fun clearFullLines() {
-        val removedLines = mutableListOf<Int>()
 
-        for (row in 0 until rows) {
-            gameGrid[row].all { it.isUpperCase() }.let {
-                if (it) {
-                    removedLines.add(row)
-                }
-            }
-        }
+    fun markFullLines(){
+        linesToRemove = (0 until rows).filter { row -> gameGrid[row].all{it.isUpperCase()} }.toTypedArray()
+    }
 
-        Score.increaseScore(removedLines.size)
-        for (lineNumber in removedLines) {
+    fun removeFullLines() {
+//        val linesToRemove = mutableListOf<Int>()
+//
+//        for (row in 0 until rows) {
+//            gameGrid[row].all { it.isUpperCase() }.let {
+//                if (it) {
+//                    linesToRemove.add(row)
+//                }
+//            }
+//        }
+
+
+
+        Score.increaseScore(linesToRemove.size)
+        for (lineNumber in linesToRemove) {
             emptyRow(lineNumber)
         }
 
@@ -90,6 +112,8 @@ class TetrisGrid(var rows: Int, var cols: Int) {
             lastRow++
             nextRow = findNextNotEmptyRow(lastRow)
         }
+
+        linesToRemove = emptyArray()
     }
 
     fun moveRowTo(sourceRow: Int, destRow: Int) {
@@ -109,7 +133,6 @@ class TetrisGrid(var rows: Int, var cols: Int) {
             if (gameGrid[row][col].isUpperCase())
                 gameGrid[row][col] = ' '
         }
-
     }
 
     fun findNextNotEmptyRow(startRow: Int): Int {
@@ -131,5 +154,23 @@ class TetrisGrid(var rows: Int, var cols: Int) {
         }
 
         activeTetromino.put()
+    }
+
+    fun getDiffuculty(): Float {
+        return 1.0f/gameSpeed*2
+    }
+
+    fun nextStep() {
+        val difficulty = getDiffuculty()
+        if (Timer.time > difficulty) {
+            fall()
+            Timer.time -= difficulty
+        }
+
+        // increase difficulty after 5 successfully destroyed lines
+        if (Score.destroyedLines > 5) {
+            Score.destroyedLines -= 5
+            gameSpeed += 1
+        }
     }
 }

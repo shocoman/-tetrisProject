@@ -3,16 +3,26 @@ package com.teturisu.game.TheGame
 import com.badlogic.gdx.ApplicationAdapter
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
+import com.badlogic.gdx.InputMultiplexer
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.badlogic.gdx.input.GestureDetector
+import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.InputEvent
+import com.badlogic.gdx.scenes.scene2d.Stage
+import com.badlogic.gdx.scenes.scene2d.Touchable
+import com.badlogic.gdx.scenes.scene2d.ui.*
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.badlogic.gdx.utils.Align
 import com.badlogic.gdx.utils.I18NBundle
 import com.badlogic.gdx.utils.JsonValue
+import com.badlogic.gdx.utils.viewport.FitViewport
+import com.teturisu.game.MenuUI.initHighscoreScreen
 import java.text.DecimalFormat
 import kotlin.math.pow
-
 
 
 object Score {
@@ -42,13 +52,87 @@ class TetrisGame(val backTexture: Texture, val localeBundle: I18NBundle, var car
 
     var cols: Int = 8
     var rows: Int = 12
-    var gameSpeed: Int = 2
 
-    var tetrisGrid = TetrisGrid(rows, cols)
+    var tetrisLogic = TetrisLogic(rows, cols)
     lateinit var tetrisPainter: TetrisPainter
 
     var showBackground = false
     var showGridLines = false
+
+    lateinit var controlOverlayStage : Stage
+
+
+    fun initControlOverlay(){
+        val viewport = FitViewport(width, height)
+        controlOverlayStage = Stage(viewport)
+
+        val skin = Skin(Gdx.files.internal("skin/uiskin.json"))
+        val table = Table(skin)
+
+
+        val btnStyle = TextButton.TextButtonStyle()
+        btnStyle.font = cartoonFont
+        btnStyle.fontColor = Color(0.7f, 1f, 0.5f, 1f)
+        btnStyle.downFontColor = Color(1f, 1f, 0.5f, 1f)
+
+
+        val rotateButton = TextButton(localeBundle.get("rotateLabel"), btnStyle)
+        rotateButton.addListener(object : ClickListener() {
+            override fun clicked(event: InputEvent, x: Float, y: Float) {
+                tetrisLogic.rotate()
+            }
+        })
+
+        val fallButton = TextButton(localeBundle.get("fallLabel"), btnStyle)
+        fallButton.addListener(object : ClickListener() {
+            override fun clicked(event: InputEvent, x: Float, y: Float) {
+                tetrisLogic.quickFall()
+            }
+        })
+
+        val leftButton = TextButton(localeBundle.get("leftLabel"), btnStyle)
+        leftButton.addListener(object : ClickListener() {
+            override fun clicked(event: InputEvent, x: Float, y: Float) {
+                tetrisLogic.shift(Tetromino.moveDirection.LEFT)
+            }
+        })
+
+        val rightButton = TextButton(localeBundle.get("rightLabel"), btnStyle)
+        rightButton.addListener(object : ClickListener() {
+            override fun clicked(event: InputEvent, x: Float, y: Float) {
+                tetrisLogic.shift(Tetromino.moveDirection.RIGHT)
+            }
+        })
+
+        val pauseButton = TextButton(localeBundle.get("pauseLabel"), btnStyle)
+        pauseButton.addListener(object : ClickListener() {
+            override fun clicked(event: InputEvent, x: Float, y: Float) {
+                tetrisLogic.gamePaused = true
+            }
+        })
+        pauseButton.setPosition(controlOverlayStage.width,controlOverlayStage.height, Align.topRight)
+
+
+
+        val vertLayout = Table()
+        vertLayout.add(rotateButton).grow()
+        vertLayout.row()
+        vertLayout.add(fallButton).grow()
+
+
+        table.add(leftButton).width(Value.percentWidth(0.25f, table)).grow()
+        table.add(vertLayout).width(Value.percentWidth(0.50f, table)).grow()
+        table.add(rightButton).width(Value.percentWidth(0.25f, table)).grow()
+
+
+        table.debugAll()
+        table.setSize(width, height/4)
+        table.touchable = Touchable.enabled
+
+        controlOverlayStage.addActor(table)
+        controlOverlayStage.addActor(pauseButton)
+    }
+
 
     override fun create() {
         width = Gdx.graphics.width.toFloat()
@@ -59,12 +143,25 @@ class TetrisGame(val backTexture: Texture, val localeBundle: I18NBundle, var car
     fun initGame() {
         rows = cols * Gdx.graphics.height / Gdx.graphics.width
 
-        tetrisGrid = TetrisGrid(rows, cols)
-        tetrisPainter = TetrisPainter(tetrisGrid, width.toInt(), height.toInt())
+        tetrisLogic = TetrisLogic(rows, cols)
+        tetrisPainter = TetrisPainter(tetrisLogic, width.toInt(), height.toInt())
         Score.score = 0f
+
+        initControlOverlay()
+        initInput()
+    }
+
+    fun initInput(){
+        val inputs = InputMultiplexer()
+        inputs.addProcessor(controlOverlayStage)
+        inputs.addProcessor(GestureDetector(MyGestureListener(this)))
+        Gdx.input.inputProcessor = inputs
     }
 
     fun render_game(spritesheetTexture: Texture, spritesheetJson: JsonValue, simpleGraphics: Boolean) {
+        controlOverlayStage.act()
+        controlOverlayStage.draw()
+
         batch.begin()
             if (showBackground)
                 batch.draw(backTexture, 0f, 0f, height, height)
@@ -75,7 +172,7 @@ class TetrisGame(val backTexture: Texture, val localeBundle: I18NBundle, var car
                     .format(Score.score)}", 10f, height-1)
 
             // draw 'pause' button
-            pauseBtnLayout = cartoonFont.draw(batch, localeBundle.get("pauseLabel"), width-1, height-1, 0f, Align.right, false)
+//            pauseBtnLayout = cartoonFont.draw(batch, localeBundle.get("pauseLabel"), width-1, height-1, 0f, Align.right, false)
 
 
         batch.end()
@@ -96,10 +193,10 @@ class TetrisGame(val backTexture: Texture, val localeBundle: I18NBundle, var car
             Gdx.app.exit()
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
-            tetrisGrid.rotate()
+            tetrisLogic.rotate()
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
-            tetrisGrid.quickFall()
+            tetrisLogic.quickFall()
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
             showBackground = !showBackground
@@ -108,10 +205,10 @@ class TetrisGame(val backTexture: Texture, val localeBundle: I18NBundle, var car
             showGridLines = !showGridLines
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
-            tetrisGrid.shift(Tetromino.moveDirection.LEFT)
+            tetrisLogic.shift(Tetromino.moveDirection.LEFT)
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) {
-            tetrisGrid.shift(Tetromino.moveDirection.RIGHT)
+            tetrisLogic.shift(Tetromino.moveDirection.RIGHT)
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
             initGame() // reset
@@ -139,17 +236,7 @@ class TetrisGame(val backTexture: Texture, val localeBundle: I18NBundle, var car
     private fun tickGame() {
         Timer.time += Gdx.graphics.deltaTime
 
-        val gameDifficulty = 1.0f/gameSpeed*2
-        if (Timer.time > gameDifficulty) {
-            tetrisGrid.fall()
-            Timer.time -= gameDifficulty
-        }
-
-        // increase difficulty after 5 successfully destroyed lines
-        if (Score.destroyedLines > 5) {
-            Score.destroyedLines -= 5
-            gameSpeed += 1
-        }
+        tetrisLogic.nextStep()
     }
 
 

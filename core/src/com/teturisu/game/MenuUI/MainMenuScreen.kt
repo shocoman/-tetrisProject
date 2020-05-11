@@ -33,9 +33,9 @@ fun TetrisMainMenu.initMainMenuScreen(){
     continueBtn.addListener(object : ClickListener() {
         override fun clicked(event: InputEvent, x: Float, y: Float) {
             // continue game
-            theGame.tetrisGrid.gamePaused = false
+            theGame.tetrisLogic.gamePaused = false
             currentState = TetrisMainMenu.GameState.GAME;
-            Gdx.input.inputProcessor = GestureDetector(MyGestureListener(theGame))
+            theGame.initInput()
         }
     })
 
@@ -74,7 +74,7 @@ fun TetrisMainMenu.initMainMenuScreen(){
 
     table.add(logoImage); table.row(); table.add(""); table.row()
 
-    if (theGame.tetrisGrid.gamePaused)
+    if (theGame.tetrisLogic.gamePaused)
         table.add(continueBtn); table.row(); table.add(""); table.row()
 
     table.add(startBtn); table.row(); table.add(""); table.row()

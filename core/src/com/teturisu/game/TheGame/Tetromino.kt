@@ -3,7 +3,7 @@ package com.teturisu.game.TheGame
 import com.teturisu.game.Utilities
 import java.util.*
 
-class Tetromino(gameGrid: TetrisGrid) {
+class Tetromino(gameGrid: TetrisLogic) {
     val grid = gameGrid
     var tetromino = randomlyChooseTetromino()
     val tetrominoRows = tetromino.size
@@ -185,6 +185,8 @@ class Tetromino(gameGrid: TetrisGrid) {
                     newTetromino[row][col] = tetromino[col][row]
                 }
             }
+        } else if (type == Types.square) {
+            return
         } else {
             val (rows, cols) = Pair(tetrominoRows - 1, tetrominoCols - 1)
             for (row in 0 until rows) {
