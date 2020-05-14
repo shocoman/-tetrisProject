@@ -85,8 +85,8 @@ fun TetrisMainMenu.initHighscoreScreen() {
     table.add(highscoresLabel).colspan(3); table.row(); table.add(""); table.row()
     // show highscores: name and score
     table.add(Label("#", Label.LabelStyle(ordinaryFont, Color.WHITE)))
-    table.add(Label("Name", Label.LabelStyle(ordinaryFont, Color.WHITE)))
-    table.add(Label("Score", Label.LabelStyle(ordinaryFont, Color.WHITE)))
+    table.add(Label(localeBundle.get("nameLabel"), Label.LabelStyle(ordinaryFont, Color.WHITE)))
+    table.add(Label(localeBundle.get("scoreLabel"), Label.LabelStyle(ordinaryFont, Color.WHITE)))
     table.row()
     for (i in 0 until 5) {
         val (name, score) = if (highscoreList.size > i) highscoreList[i]  else Pair("---", 0)

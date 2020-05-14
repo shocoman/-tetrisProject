@@ -43,7 +43,7 @@ object Timer {
 }
 
 
-class TetrisGame(val backTexture: Texture, val localeBundle: I18NBundle, var cartoonFont: BitmapFont) : ApplicationAdapter() {
+class TetrisGame(val backTexture: Texture, var localeBundle: I18NBundle, var cartoonFont: BitmapFont) : ApplicationAdapter() {
     val batch = SpriteBatch()
 
     var width = Gdx.graphics.width.toFloat()
@@ -247,6 +247,11 @@ class TetrisGame(val backTexture: Texture, val localeBundle: I18NBundle, var car
 
     override fun dispose() {
         batch.dispose()
+    }
+
+    fun setLocale(loc: I18NBundle){
+        localeBundle = loc;
+        initControlOverlay();
     }
 }
 

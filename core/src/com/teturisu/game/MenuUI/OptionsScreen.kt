@@ -119,9 +119,11 @@ fun TetrisMainMenu.initOptionsScreen(){
         override fun changed(event: ChangeEvent?, actor: Actor?) {
             if (languageSelectBox.selected == "English") {
                 localeBundle = I18NBundle.createBundle(Gdx.files.internal("i18n/labels"), Locale("en"))
+                theGame.setLocale(localeBundle)
             } else if (languageSelectBox.selected == "Russian") {
                 localeBundle = I18NBundle.createBundle(Gdx.files.internal("i18n/labels"), Locale("ru"))
-            }
+                theGame.setLocale(localeBundle)
+                }
             setStage(TetrisMainMenu.GameState.OPTIONS)
         }
     })
