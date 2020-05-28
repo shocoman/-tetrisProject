@@ -41,7 +41,7 @@ fun TetrisMainMenu.changeSpritesheet(newSpritesheet: String){
 }
 
 fun TetrisMainMenu.initOptionsScreen(){
-    val viewport = FitViewport(width/2f, height/2f)
+    val viewport = FitViewport(width, height)
     optionsStage = Stage(viewport)
 
     val skin = Skin(Gdx.files.internal("skin/uiskin.json"))
@@ -147,6 +147,7 @@ fun TetrisMainMenu.initOptionsScreen(){
     table.add(Label(localeBundle.get("languageLabel") + ": ", Label.LabelStyle(ordinaryFont, Color.WHITE))).left()
     table.add(languageSelectBox).fillX()
     table.setFillParent(true)
+//    table.width = 300f
 
     optionsStage.addActor(backBtn)
     optionsStage.addActor(optionsLabel)

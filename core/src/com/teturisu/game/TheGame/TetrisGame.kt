@@ -159,11 +159,10 @@ class TetrisGame(val backTexture: Texture, var localeBundle: I18NBundle, var car
     }
 
     fun render_game(spritesheetTexture: Texture, spritesheetJson: JsonValue, simpleGraphics: Boolean) {
-        controlOverlayStage.act()
-        controlOverlayStage.draw()
+
 
         batch.begin()
-            if (showBackground)
+            if (!showBackground)
                 batch.draw(backTexture, 0f, 0f, height, height)
 
             // draw score label
@@ -176,6 +175,9 @@ class TetrisGame(val backTexture: Texture, var localeBundle: I18NBundle, var car
 
 
         batch.end()
+
+        controlOverlayStage.act()
+        controlOverlayStage.draw()
 
         if (showGridLines)
             tetrisPainter.drawGridLines()

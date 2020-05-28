@@ -40,7 +40,7 @@ fun TetrisMainMenu.addHighscore(name: String, score: Int){
 }
 
 fun TetrisMainMenu.initHighscoreScreen() {
-    val viewport = FitViewport(width/2f, height/2f)
+    val viewport = FitViewport(width, height)
     highscoresStage = Stage(viewport)
 
     val skin = Skin(Gdx.files.internal("skin/uiskin.json"))
