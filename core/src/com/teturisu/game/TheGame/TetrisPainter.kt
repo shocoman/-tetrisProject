@@ -85,7 +85,7 @@ class TetrisPainter(var tetrisLogic: TetrisLogic, var screenWidth: Int, var scre
                             rotation = 0f
                         } else {
                             // interpolate Timer.time between 0(?) and getDifficulty()
-                            val interp = Interpolation.circleOut
+                            val interp = Interpolation.fastSlow
                             rotation = interp.apply(0F, 360F, Timer.time.toFloat()/tetrisLogic.getDiffuculty())
                             w = interp.apply(blockSize.x, 0f, Timer.time.toFloat()/tetrisLogic.getDiffuculty())
                             h = interp.apply(blockSize.y, 0f, Timer.time.toFloat()/tetrisLogic.getDiffuculty())
